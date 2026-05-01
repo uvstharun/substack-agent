@@ -43,7 +43,7 @@ from telegram.constants import ParseMode
 
 from config.config import cfg
 from agent.trend_researcher import get_trend_summary, get_ai_news_topics
-from agent import topic_generator, outline_generator, draft_writer, daily_content, orchestrator
+from agent import topic_generator, outline_generator, draft_writer, daily_content, orchestrator, comment_suggester
 from memory import topic_memory
 from prompts.onboarding_prompts import SUBSTACK_GUIDE
 from telegram_bot.formatters import (
@@ -101,6 +101,8 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/news — fresh AI news (list of post ideas from the web)\n"
         "/newspost N — write a post about news item N (or a short description)\n"
         "/notes [N] — generate N short 30-40 word AI Notes (default 5)\n"
+        "/comment &lt;paste post&gt; — suggest 3 human-feeling comments\n"
+        "  (or just paste a post into chat — I'll detect it automatically)\n"
         "/jobtip — job search strategy tip\n"
         "/learned &lt;your note&gt; — polish your learning into a post\n\n"
         "📚 <b>Weekly long-form content:</b>\n"
@@ -498,6 +500,31 @@ async def cmd_learned(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await _safe_send(update, f"❌ Failed: {_h(str(e))}")
 
 
+# ── Comment suggester ─────────────────────────────────────────────────────────
+
+async def cmd_comment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Suggest 3 human-feeling comments for a pasted Substack post or Note."""
+    if not _authorized(update):
+        return await _deny(update)
+    raw = " ".join(context.args).strip() if context.args else ""
+    if not raw:
+        await _safe_send(
+            update,
+            "Usage: <code>/comment &lt;paste the post or note text&gt;</code>\n\n"
+            "Tip: you can also just paste the post directly into chat (no slash) "
+            "and I'll detect it and suggest comments automatically.",
+        )
+        return
+    await _safe_send(update, "🧠 Drafting 3 comment options... (~20s)")
+    try:
+        comments = comment_suggester.suggest_comments(raw)
+        await update.message.reply_text(comments, parse_mode=None)
+        await _safe_send(update, "📌 Pick one, edit a word or two so it sounds like YOU, then paste it as a comment.")
+    except Exception as e:
+        logger.error(f"Comment suggestion failed: {e}")
+        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
+
+
 # ── Conversational Q&A (non-command messages) ────────────────────────────────
 
 _CHAT_COACH_PROMPT = """\
@@ -525,12 +552,36 @@ Style:
 """
 
 
+def _looks_like_pasted_post(text: str) -> bool:
+    """
+    Heuristic: a pasted post/note is long, has paragraph breaks, and isn't
+    structured like a question. Triggers the comment-suggester branch.
+    """
+    if len(text) < 220:
+        return False
+    # Multiple paragraphs strongly suggest pasted content
+    paragraph_breaks = text.count("\n\n")
+    line_count = text.count("\n")
+    word_count = len(text.split())
+    if word_count < 40:
+        return False
+    # Question-like short messages should still hit the coach
+    if text.endswith("?") and word_count < 60:
+        return False
+    return paragraph_breaks >= 1 or line_count >= 3 or word_count >= 80
+
+
 async def cmd_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Top-level orchestrator for free-form messages. Routes to:
+      - comment_suggester: when a long post/note is pasted
+      - coach: for questions, short messages, or anything else
+    """
     if not _authorized(update):
         return await _deny(update)
 
-    question = (update.message.text or "").strip()
-    if not question:
+    text = (update.message.text or "").strip()
+    if not text:
         return
 
     try:
@@ -538,9 +589,24 @@ async def cmd_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception:
         pass
 
+    # ROUTE 1: looks like a pasted Substack post / note → suggest comments
+    if _looks_like_pasted_post(text):
+        logger.info("Orchestrator routed to comment_suggester")
+        await _safe_send(update, "🧠 Looks like a post. Drafting 3 comment options... (~20s)")
+        try:
+            comments = comment_suggester.suggest_comments(text)
+            await update.message.reply_text(comments, parse_mode=None)
+            await _safe_send(update, "📌 Pick one, tweak a word so it sounds like YOU, then paste it as a comment.")
+        except Exception as e:
+            logger.error(f"Comment suggestion failed: {e}")
+            await _safe_send(update, f"❌ Comment suggestion failed: {_h(str(e))}")
+        return
+
+    # ROUTE 2: question / chat / anything else → coach
+    logger.info("Orchestrator routed to coach")
     try:
         reply = orchestrator.call(
-            question,
+            text,
             extra_system=_CHAT_COACH_PROMPT,
             max_tokens=900,
             temperature=0.7,
@@ -573,6 +639,7 @@ def run_bot() -> None:
     app.add_handler(CommandHandler("news", cmd_news))
     app.add_handler(CommandHandler("newspost", cmd_newspost))
     app.add_handler(CommandHandler("notes", cmd_notes))
+    app.add_handler(CommandHandler("comment", cmd_comment))
     app.add_handler(CommandHandler("jobtip", cmd_jobtip))
     app.add_handler(CommandHandler("learned", cmd_learned))
     # Weekly long-form
