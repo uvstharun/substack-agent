@@ -81,6 +81,36 @@ Return ONLY the markdown post. No preamble.
 """
 
 
+def build_ai_notes_prompt(news_context: str, count: int = 5) -> str:
+    return f"""\
+Generate {count} VERY SHORT Substack Notes (30-40 words EACH, hard cap) about recent AI updates.
+These are quick engagement posts, like tweets. Each one should hook on a fresh AI development
+and END WITH A SHARP QUESTION that invites the reader to reply.
+
+Each note must:
+- Be 30-40 words. Count them. No more.
+- Reference a specific real AI update from the news context (model release, framework, paper, controversy, tool launch).
+- State the fact in ONE plain sentence (no hype).
+- Add ONE sentence of practitioner reaction, curiosity, or opinion.
+- End with a genuine question (not rhetorical, not "thoughts?").
+
+{_SHARED_VOICE_RULES}
+
+Format your output as a numbered list:
+
+1. <note text 30-40 words>
+
+2. <note text 30-40 words>
+
+(etc.)
+
+Recent AI news to draw from:
+{news_context or "(No fresh news available — pick recent evergreen AI developments you can speak to credibly.)"}
+
+Return ONLY the numbered notes. No preamble, no headers, no explanations.
+"""
+
+
 def build_daily_learning_prompt(raw_learning: str, recent_learnings: list[str] | None = None) -> str:
     recent_note = ""
     if recent_learnings:

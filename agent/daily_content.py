@@ -15,6 +15,7 @@ from prompts.daily_prompts import (
     build_ai_news_prompt,
     build_job_tip_prompt,
     build_daily_learning_prompt,
+    build_ai_notes_prompt,
 )
 from prompts.onboarding_prompts import FIRST_POST_COACHING
 
@@ -103,6 +104,21 @@ def generate_learning_post(raw_learning: str) -> str:
     post = orchestrator.call(prompt, max_tokens=1000, temperature=0.8)
     _save_post("learning", post)
     return post
+
+
+def generate_ai_notes(count: int = 5) -> str:
+    """Generate a batch of very short (30-40 word) AI Substack Notes."""
+    logger.info(f"Generating {count} short AI notes...")
+    from agent.trend_researcher import get_trend_summary
+    try:
+        news_context = get_trend_summary()
+    except Exception as e:
+        logger.warning(f"Trend fetch failed, generating without context: {e}")
+        news_context = ""
+    prompt = build_ai_notes_prompt(news_context, count=count)
+    notes = orchestrator.call(prompt, max_tokens=1200, temperature=0.9)
+    _save_post("ai_notes", notes)
+    return notes
 
 
 def generate_first_post() -> str:

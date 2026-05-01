@@ -100,6 +100,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/daily — generate today's full daily pack\n"
         "/news — fresh AI news (list of post ideas from the web)\n"
         "/newspost N — write a post about news item N (or a short description)\n"
+        "/notes [N] — generate N short 30-40 word AI Notes (default 5)\n"
         "/jobtip — job search strategy tip\n"
         "/learned &lt;your note&gt; — polish your learning into a post\n\n"
         "📚 <b>Weekly long-form content:</b>\n"
@@ -438,6 +439,28 @@ async def cmd_newspost(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await _safe_send(update, f"❌ Failed: {_h(str(e))}")
 
 
+async def cmd_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Generate a batch of very short (30-40 word) AI Substack Notes."""
+    if not _authorized(update):
+        return await _deny(update)
+    # Optional count argument: /notes 7
+    count = 5
+    if context.args:
+        try:
+            count = max(1, min(10, int(context.args[0])))
+        except ValueError:
+            pass
+    await _safe_send(update, f"⚡ Generating {count} short AI notes (30-40 words each)... (~30s)")
+    try:
+        notes = daily_content.generate_ai_notes(count=count)
+        # Send as plain text so the numbered list renders cleanly
+        await update.message.reply_text(notes, parse_mode=None)
+        await _safe_send(update, "📌 Pick one and paste into Substack Notes. Run /notes again for more.")
+    except Exception as e:
+        logger.error(f"AI notes generation failed: {e}")
+        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
+
+
 async def cmd_jobtip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not _authorized(update):
         return await _deny(update)
@@ -549,6 +572,7 @@ def run_bot() -> None:
     app.add_handler(CommandHandler("daily", cmd_daily))
     app.add_handler(CommandHandler("news", cmd_news))
     app.add_handler(CommandHandler("newspost", cmd_newspost))
+    app.add_handler(CommandHandler("notes", cmd_notes))
     app.add_handler(CommandHandler("jobtip", cmd_jobtip))
     app.add_handler(CommandHandler("learned", cmd_learned))
     # Weekly long-form
