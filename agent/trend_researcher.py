@@ -8,7 +8,10 @@ from agent import orchestrator
 
 _SUMMARIZE_PROMPT = """\
 Below are raw snippets from recent web searches about AI, LLMs, data science, agents,
-and ML tooling — the generalist AI/DS landscape.
+and ML tooling (the generalist AI/DS landscape).
+
+HARD RULE: Only include items from the LAST 2 WEEKS. Skip anything older than 14 days
+even if it appears in the snippets.
 
 Your task: summarize the most important and actionable trends in 400-600 words.
 Focus on:
@@ -28,8 +31,12 @@ before a content planning session.
 
 _NEWS_TOPICS_PROMPT = """\
 You are helping a generalist AI/Data Science Substack writer find post ideas based
-on fresh AI news from the last ~72 hours. Below are real news items scraped from
+on fresh AI news from the LAST 2 WEEKS ONLY. Below are real news items scraped from
 the web just now.
+
+HARD RULE: Skip anything older than 2 weeks. If a snippet references a date or event
+older than 14 days from today, DO NOT include it. Prefer items that explicitly mention
+"this week", "yesterday", "today", or a date within the last 14 days.
 
 Your job: pick the 6-8 MOST POST-WORTHY items and for each give a sharp, specific
 post angle the author could take. Skip generic "AI will change everything" items.

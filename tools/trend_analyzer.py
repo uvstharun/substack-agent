@@ -32,13 +32,14 @@ _NEWS_QUERIES = [
 
 
 def fetch_news_snippets(max_items: int = 30) -> list[dict]:
-    """Fetch recent AI news snippets with titles and urls for topic ideation."""
-    logger.info("Fetching recent AI news...")
+    """Fetch recent AI news snippets (last ~2 weeks) for topic ideation."""
+    logger.info("Fetching recent AI news (last 2 weeks)...")
     items: list[dict] = []
     seen: set[str] = set()
 
     for query in _NEWS_QUERIES:
-        results = search(query, max_results=5)
+        # 'm' = past month from DDG; we further filter to ~2 weeks downstream via the prompt
+        results = search(query, max_results=5, recency="m")
         for r in results:
             title = r.get("title", "").strip()
             snippet = r.get("snippet", "").strip()
@@ -65,7 +66,7 @@ def fetch_trend_report() -> dict:
     sources: list[dict] = []
 
     for query in _SEARCH_QUERIES:
-        results = search(query, max_results=5)
+        results = search(query, max_results=5, recency="m")
         for r in results:
             snippet = r.get("snippet", "").strip()
             if snippet and len(snippet) > 40:

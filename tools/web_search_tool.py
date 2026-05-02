@@ -20,13 +20,25 @@ _HEADERS = {
 _DDG_URL = "https://html.duckduckgo.com/html/"
 
 
-def search(query: str, max_results: int = 8, sleep_secs: float = 1.0) -> list[dict]:
-    """Search DuckDuckGo and return a list of {title, url, snippet} dicts."""
+def search(
+    query: str,
+    max_results: int = 8,
+    sleep_secs: float = 1.0,
+    recency: str | None = None,
+) -> list[dict]:
+    """Search DuckDuckGo and return a list of {title, url, snippet} dicts.
+
+    recency: optional date filter. One of: 'd' (past day), 'w' (past week),
+    'm' (past month), 'y' (past year). None = no date filter.
+    """
     try:
         time.sleep(sleep_secs)
+        data = {"q": query, "b": "", "kl": "us-en"}
+        if recency in {"d", "w", "m", "y"}:
+            data["df"] = recency
         resp = httpx.post(
             _DDG_URL,
-            data={"q": query, "b": "", "kl": "us-en"},
+            data=data,
             headers=_HEADERS,
             timeout=15,
             follow_redirects=True,
