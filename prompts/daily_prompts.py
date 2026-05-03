@@ -82,15 +82,36 @@ Return ONLY the markdown post. No preamble.
 
 
 def build_ai_notes_prompt(news_context: str, count: int = 5) -> str:
+    has_news = bool(news_context and news_context.strip()) and "No fresh trend data" not in news_context
+
+    if has_news:
+        ground_rule = (
+            "Each note must reference a specific real AI update from the news context "
+            "below (model release, framework, paper, controversy, tool launch). Do not "
+            "invent companies, model names, or events that are not in the context."
+        )
+        context_block = f"Recent AI news to draw from:\n{news_context}"
+    else:
+        ground_rule = (
+            "EVERGREEN MODE: No fresh news fetched this round. Write notes about ONGOING "
+            "AI conversations the practitioner audience is actively discussing right now "
+            "(prompt engineering tradeoffs, RAG vs fine-tuning, agent reliability, "
+            "evaluation pain, cost vs quality, when not to use an LLM, etc.). "
+            "Do NOT invent specific model releases, version numbers, dates, or company "
+            "announcements. Speak from the author's perspective as a practitioner."
+        )
+        context_block = "(No fresh news context. Use evergreen mode per the rule above.)"
+
     return f"""\
-Generate {count} VERY SHORT Substack Notes (30-40 words EACH, hard cap) about recent AI updates.
-These are quick engagement posts, like tweets. Each one should hook on a fresh AI development
-and END WITH A SHARP QUESTION that invites the reader to reply.
+Generate {count} VERY SHORT Substack Notes (30-40 words EACH, hard cap) about AI.
+These are quick engagement posts, like tweets. Each one should hook the reader and
+END WITH A SHARP QUESTION that invites a reply.
+
+{ground_rule}
 
 Each note must:
 - Be 30-40 words. Count them. No more.
-- Reference a specific real AI update from the news context (model release, framework, paper, controversy, tool launch).
-- State the fact in ONE plain sentence (no hype).
+- State the hook in ONE plain sentence (no hype).
 - Add ONE sentence of practitioner reaction, curiosity, or opinion.
 - End with a genuine question (not rhetorical, not "thoughts?").
 
@@ -104,8 +125,7 @@ Format your output as a numbered list:
 
 (etc.)
 
-Recent AI news to draw from:
-{news_context or "(No fresh news available — pick recent evergreen AI developments you can speak to credibly.)"}
+{context_block}
 
 Return ONLY the numbered notes. No preamble, no headers, no explanations.
 """

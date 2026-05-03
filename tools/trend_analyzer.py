@@ -31,15 +31,11 @@ _NEWS_QUERIES = [
 ]
 
 
-def fetch_news_snippets(max_items: int = 30) -> list[dict]:
-    """Fetch recent AI news snippets (last ~2 weeks) for topic ideation."""
-    logger.info("Fetching recent AI news (last 2 weeks)...")
+def _collect(queries: list[str], max_items: int, recency: str | None) -> list[dict]:
     items: list[dict] = []
     seen: set[str] = set()
-
-    for query in _NEWS_QUERIES:
-        # 'm' = past month from DDG; we further filter to ~2 weeks downstream via the prompt
-        results = search(query, max_results=5, recency="m")
+    for query in queries:
+        results = search(query, max_results=5, recency=recency)
         for r in results:
             title = r.get("title", "").strip()
             snippet = r.get("snippet", "").strip()
@@ -56,22 +52,54 @@ def fetch_news_snippets(max_items: int = 30) -> list[dict]:
     return items
 
 
-def fetch_trend_report() -> dict:
+def fetch_news_snippets(max_items: int = 30, min_required: int = 5) -> list[dict]:
     """
-    Run searches across healthcare AI / data science topics and return a structured
-    trend report consumed by the topic generator.
-    """
-    logger.info("Starting trend research...")
-    all_snippets: list[str] = []
-    sources: list[dict] = []
+    Fetch recent AI news snippets for topic ideation.
 
+    Tries with the 'past month' DDG date filter first; if the result count
+    is below `min_required`, retries without any date filter so the agent
+    never silently runs out of context to work with.
+    """
+    logger.info("Fetching recent AI news (past month filter)...")
+    items = _collect(_NEWS_QUERIES, max_items=max_items, recency="m")
+
+    if len(items) < min_required:
+        logger.warning(
+            f"Only {len(items)} items with date filter; retrying without it"
+        )
+        items = _collect(_NEWS_QUERIES, max_items=max_items, recency=None)
+
+    logger.info(f"News fetch complete: {len(items)} items")
+    return items
+
+
+def _collect_trend_snippets(recency: str | None) -> tuple[list[str], list[dict]]:
+    snippets: list[str] = []
+    sources: list[dict] = []
     for query in _SEARCH_QUERIES:
-        results = search(query, max_results=5, recency="m")
+        results = search(query, max_results=5, recency=recency)
         for r in results:
             snippet = r.get("snippet", "").strip()
             if snippet and len(snippet) > 40:
-                all_snippets.append(snippet)
+                snippets.append(snippet)
                 sources.append({"title": r.get("title", ""), "url": r.get("url", "")})
+    return snippets, sources
+
+
+def fetch_trend_report(min_required: int = 8) -> dict:
+    """
+    Run searches across the generalist AI/DS landscape. Tries with the past-month
+    date filter first; if the result count is below `min_required`, retries with
+    no date filter so the agent never has to fall back to "no fresh trend data".
+    """
+    logger.info("Starting trend research (past month filter)...")
+    all_snippets, sources = _collect_trend_snippets(recency="m")
+
+    if len(all_snippets) < min_required:
+        logger.warning(
+            f"Only {len(all_snippets)} trend snippets with date filter; retrying without it"
+        )
+        all_snippets, sources = _collect_trend_snippets(recency=None)
 
     # Deduplicate loosely by snippet start
     seen: set[str] = set()
@@ -83,8 +111,7 @@ def fetch_trend_report() -> dict:
             unique_snippets.append(s)
 
     trend_text = "\n\n".join(unique_snippets[:40])
-
-    logger.info(f"Trend research complete — {len(unique_snippets)} unique snippets collected")
+    logger.info(f"Trend research complete: {len(unique_snippets)} unique snippets")
 
     return {
         "summary": trend_text,
