@@ -25,25 +25,34 @@ SOUND HUMAN, NOT AI (strict):
 
 def build_ai_news_prompt(trend_context: str) -> str:
     return f"""\
-Write a SHORT daily Substack post (200-350 words) commenting on a recent AI development.
+Write a SHORT daily Substack post (200-350 words) about ONE recent AI development.
 
-Pick ONE thing from the trend context below that a practitioner would actually care about — \
-a new model release, a framework update, an interesting paper, a deployment story, a controversy. \
-Do not summarize multiple things.
+THIS IS A NEWS POST, NOT A PERSONAL LEARNING POST.
+The subject is what is happening in the AI world right now. The author is the reporter
+and commentator, NOT the subject. Do not turn this into "what I learned this week" or
+"here is my journey". Stay focused on the news itself.
 
-Your angle should be a practitioner's take: what this means for people actually building with AI, \
-not abstract industry commentary.
+Pick ONE thing from the trend context below that a practitioner would actually care about:
+a new model release, a framework update, an interesting paper, a deployment story, a
+controversy, a benchmark result, a tool launch. Do not summarize multiple things.
+
+Angle:
+- Lead with the news. State what happened, plainly.
+- Add a brief practitioner perspective on why it matters and who should pay attention.
+- A short opinion is fine. A long personal story is not.
+- Do NOT reference the author's job, employer, side projects, or learning journey
+  unless the news is DIRECTLY about that exact topic.
 
 Structure:
-- Title (punchy, 6-10 words)
-- Opening line: state the fact plainly in one sentence
-- 2-3 short paragraphs: why this matters, what practitioners should notice, your honest take
-- Closing: a question or prompt that invites the reader to share their experience
+- Title (punchy, 6-10 words, about the news, not about the author)
+- Opening line: the fact, plain, one sentence
+- 2-3 short paragraphs: what happened, why it matters, what changes for practitioners
+- Closing: a question that invites the reader to share THEIR take on the news
 
 {_SHARED_VOICE_RULES}
 
 Trend context to draw from:
-{trend_context or "(No trend data available — pick an evergreen recent AI development you can speak to credibly.)"}
+{trend_context or "(No trend data available. Pick a recent real AI development you can speak to credibly. Do not invent specifics.)"}
 
 Return ONLY the markdown post. No preamble, no JSON, no explanation.
 """
@@ -88,17 +97,20 @@ def build_ai_notes_prompt(news_context: str, count: int = 5) -> str:
         ground_rule = (
             "Each note must reference a specific real AI update from the news context "
             "below (model release, framework, paper, controversy, tool launch). Do not "
-            "invent companies, model names, or events that are not in the context."
+            "invent companies, model names, or events that are not in the context. "
+            "Stay focused on the NEWS ITSELF. Do not turn notes into 'what I'm learning' "
+            "or personal-journey posts. The author is the commentator, not the subject."
         )
         context_block = f"Recent AI news to draw from:\n{news_context}"
     else:
         ground_rule = (
-            "EVERGREEN MODE: No fresh news fetched this round. Write notes about ONGOING "
-            "AI conversations the practitioner audience is actively discussing right now "
-            "(prompt engineering tradeoffs, RAG vs fine-tuning, agent reliability, "
-            "evaluation pain, cost vs quality, when not to use an LLM, etc.). "
+            "EVERGREEN MODE: No fresh news fetched this round. Write notes about what is "
+            "happening in the AI world right now at a topic level: ongoing debates and "
+            "shifts the practitioner audience is actively discussing (prompt engineering "
+            "tradeoffs, RAG vs fine-tuning, agent reliability, evaluation pain, cost vs "
+            "quality, the open vs closed model gap, when not to use an LLM, etc.). "
             "Do NOT invent specific model releases, version numbers, dates, or company "
-            "announcements. Speak from the author's perspective as a practitioner."
+            "announcements. Stay focused on the AI landscape, not on the author."
         )
         context_block = "(No fresh news context. Use evergreen mode per the rule above.)"
 
