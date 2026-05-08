@@ -43,7 +43,7 @@ from telegram.constants import ParseMode
 
 from config.config import cfg
 from agent.trend_researcher import get_trend_summary, get_ai_news_topics
-from agent import topic_generator, outline_generator, draft_writer, daily_content, orchestrator, comment_suggester
+from agent import topic_generator, outline_generator, draft_writer, daily_content, orchestrator, research_writer, comment_suggester
 from memory import topic_memory
 from prompts.onboarding_prompts import SUBSTACK_GUIDE
 from telegram_bot.formatters import (
@@ -101,6 +101,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/news — fresh AI news (list of post ideas from the web)\n"
         "/newspost N — write a post about news item N (or a short description)\n"
         "/notes [N] — generate N short 30-40 word AI Notes (default 5)\n"
+        "/research &lt;topic&gt; — give me a topic, I research the web and write a 700-1000 word post with sources\n"
         "/comment &lt;paste post&gt; — suggest 3 human-feeling comments\n"
         "  (or just paste a post into chat — I'll detect it automatically)\n"
         "/jobtip — job search strategy tip\n"
@@ -441,6 +442,48 @@ async def cmd_newspost(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await _safe_send(update, f"❌ Failed: {_h(str(e))}")
 
 
+async def cmd_research(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Take a topic, search the web, return a 700-1000 word grounded Substack post."""
+    if not _authorized(update):
+        return await _deny(update)
+    topic = " ".join(context.args).strip() if context.args else ""
+    if not topic:
+        await _safe_send(
+            update,
+            "Usage: <code>/research &lt;topic&gt;</code>\n\n"
+            "Example:\n"
+            "<code>/research RAG vs fine-tuning for clinical documentation</code>\n"
+            "<code>/research what makes an AI agent reliable in production</code>\n\n"
+            "I'll search the web, write a 700-1000 word post, and list the sources at the bottom.",
+        )
+        return
+
+    await _safe_send(update, f"🔎 Researching: <i>{_h(topic)}</i>\nSearching the web and writing... (~90s)")
+    try:
+        result = research_writer.research_and_write(topic)
+        post = result.get("post", "")
+        sources = result.get("sources", [])
+
+        # Send a short header note
+        if not result.get("sufficient"):
+            await _safe_send(
+                update,
+                "⚠️ Limited sources found for this topic. Post is exploratory. "
+                "You may want to refine the topic or fact-check more carefully before publishing.",
+            )
+
+        await _send_post_as_file(update, "research", post)
+
+        # Also list sources separately for quick reference (capped at 10)
+        if sources:
+            lines = [f"{i+1}. {s.get('title','(untitled)')} — {s.get('url','(no url)')}"
+                     for i, s in enumerate(sources[:10])]
+            await update.message.reply_text("📚 Sources used:\n\n" + "\n".join(lines), parse_mode=None)
+    except Exception as e:
+        logger.error(f"Research write failed: {e}")
+        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
+
+
 async def cmd_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Generate a batch of very short (30-40 word) AI Substack Notes."""
     if not _authorized(update):
@@ -639,6 +682,7 @@ def run_bot() -> None:
     app.add_handler(CommandHandler("news", cmd_news))
     app.add_handler(CommandHandler("newspost", cmd_newspost))
     app.add_handler(CommandHandler("notes", cmd_notes))
+    app.add_handler(CommandHandler("research", cmd_research))
     app.add_handler(CommandHandler("comment", cmd_comment))
     app.add_handler(CommandHandler("jobtip", cmd_jobtip))
     app.add_handler(CommandHandler("learned", cmd_learned))
