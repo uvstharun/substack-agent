@@ -10,12 +10,12 @@ _SUMMARIZE_PROMPT = """\
 Below are raw snippets from recent web searches about AI, LLMs, data science, agents,
 and ML tooling (the generalist AI/DS landscape).
 
-HARD RULE: Only include items from the LAST 2 WEEKS. Skip anything older than 14 days
+HARD RULE: Only include items from the LAST 1 MONTH. Skip anything older than 30 days
 even if it appears in the snippets.
 
 Your task: summarize the most important and actionable trends in 400-600 words.
 Focus on:
-1. Major model releases, framework launches, tooling updates in the last few weeks
+1. Major model releases, framework launches, tooling updates in the last month
 2. What practitioners are debating or struggling with right now
 3. Career and skills trends for data scientists moving into AI/ML engineering
 4. Backlash, failures, or cautionary stories worth noting
@@ -31,12 +31,12 @@ before a content planning session.
 
 _NEWS_TOPICS_PROMPT = """\
 You are helping a generalist AI/Data Science Substack writer find post ideas based
-on fresh AI news from the LAST 2 WEEKS ONLY. Below are real news items scraped from
+on fresh AI news from the LAST 1 MONTH ONLY. Below are real news items scraped from
 the web just now.
 
-HARD RULE: Skip anything older than 2 weeks. If a snippet references a date or event
-older than 14 days from today, DO NOT include it. Prefer items that explicitly mention
-"this week", "yesterday", "today", or a date within the last 14 days.
+HARD RULE: Skip anything older than 1 month. If a snippet references a date or event
+older than 30 days from today, DO NOT include it. Prefer items that explicitly mention
+"this week", "yesterday", "today", or a date within the last 30 days.
 
 Your job: pick the 6-8 MOST POST-WORTHY items and for each give a sharp, specific
 post angle the author could take. Skip generic "AI will change everything" items.
