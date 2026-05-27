@@ -95,29 +95,40 @@ def build_ai_notes_prompt(news_context: str, count: int = 5) -> str:
 
     if has_news:
         ground_rule = (
-            "Each note must reference a specific real AI update from the news context "
-            "below (model release, framework, paper, controversy, tool launch). Do not "
-            "invent companies, model names, or events that are not in the context. "
-            "Stay focused on the NEWS ITSELF. Do not turn notes into 'what I'm learning' "
-            "or personal-journey posts. The author is the commentator, not the subject."
+            "Mix the notes across AI and data science. When a note touches a specific "
+            "news item, reference a real one from the context below (model release, "
+            "framework, paper, controversy, tool launch). Do not invent companies, "
+            "model names, or events that are not in the context. For broader data "
+            "science notes (stats, ML practice, tooling, career, data work) you may "
+            "write from general practitioner knowledge, but never fabricate specific "
+            "releases, version numbers, or dates. Stay focused on the TOPIC, not on a "
+            "personal journey. The author is the commentator, not the subject."
         )
-        context_block = f"Recent AI news to draw from:\n{news_context}"
+        context_block = f"Recent AI news to draw from (for the news-flavored notes):\n{news_context}"
     else:
         ground_rule = (
             "EVERGREEN MODE: No fresh news fetched this round. Write notes about what is "
-            "happening in the AI world right now at a topic level: ongoing debates and "
-            "shifts the practitioner audience is actively discussing (prompt engineering "
-            "tradeoffs, RAG vs fine-tuning, agent reliability, evaluation pain, cost vs "
-            "quality, the open vs closed model gap, when not to use an LLM, etc.). "
+            "happening across AI and data science right now at a topic level: ongoing "
+            "debates and shifts the practitioner audience is actively discussing. "
+            "AI angles: prompt engineering tradeoffs, RAG vs fine-tuning, agent "
+            "reliability, evaluation pain, cost vs quality, open vs closed models, "
+            "when not to use an LLM. Data science angles: feature engineering vs more "
+            "data, when a simple model beats a complex one, dirty data realities, "
+            "experiment design, dashboards nobody reads, SQL vs pandas, forecasting "
+            "pitfalls, stakeholder communication, MLOps basics. "
             "Do NOT invent specific model releases, version numbers, dates, or company "
-            "announcements. Stay focused on the AI landscape, not on the author."
+            "announcements. Stay focused on the field, not on the author."
         )
         context_block = "(No fresh news context. Use evergreen mode per the rule above.)"
 
     return f"""\
-Generate {count} VERY SHORT Substack Notes (30-40 words EACH, hard cap) about AI.
-These are quick engagement posts, like tweets. Each one should hook the reader and
-END WITH A SHARP QUESTION that invites a reply.
+Generate {count} VERY SHORT Substack Notes (30-40 words EACH, hard cap) about AI AND
+DATA SCIENCE. These are quick engagement posts, like tweets. Each one should hook the
+reader and END WITH A SHARP QUESTION that invites a reply.
+
+Aim for a MIX: not every note should be about a new AI model. Include data science
+notes too (stats, ML practice, data work, tooling, the realities of the job). Variety
+keeps the feed interesting.
 
 {ground_rule}
 
