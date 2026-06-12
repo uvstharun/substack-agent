@@ -25,16 +25,17 @@ SOUND HUMAN, NOT AI (strict):
 
 def build_ai_news_prompt(trend_context: str) -> str:
     return f"""\
-Write a SHORT daily Substack post (200-350 words) about ONE recent AI development.
+Write a SHORT daily Substack post (200-350 words) about ONE recent AI or data science development.
 
 THIS IS A NEWS POST, NOT A PERSONAL LEARNING POST.
-The subject is what is happening in the AI world right now. The author is the reporter
-and commentator, NOT the subject. Do not turn this into "what I learned this week" or
-"here is my journey". Stay focused on the news itself.
+The subject is what is happening in the AI and data science world right now. The author
+is the reporter and commentator, NOT the subject. Do not turn this into "what I learned
+this week" or "here is my journey". Stay focused on the news itself.
 
 Pick ONE thing from the trend context below that a practitioner would actually care about:
-a new model release, a framework update, an interesting paper, a deployment story, a
-controversy, a benchmark result, a tool launch. Do not summarize multiple things.
+a new model release, a framework or library update, an interesting paper, a deployment
+story, a controversy, a benchmark result, a tool launch, a data engineering development,
+an MLOps or infrastructure shift, or a healthcare AI story. Do not summarize multiple things.
 
 Angle:
 - Lead with the news. State what happened, plainly.
@@ -52,7 +53,7 @@ Structure:
 {_SHARED_VOICE_RULES}
 
 Trend context to draw from:
-{trend_context or "(No trend data available. Pick a recent real AI development you can speak to credibly. Do not invent specifics.)"}
+{trend_context or "(No trend data available. Pick a recent real AI or data science development you can speak to credibly. Do not invent specifics.)"}
 
 Return ONLY the markdown post. No preamble, no JSON, no explanation.
 """
@@ -151,6 +152,77 @@ Format your output as a numbered list:
 {context_block}
 
 Return ONLY the numbered notes. No preamble, no headers, no explanations.
+"""
+
+
+def build_take_prompt(topic: str) -> str:
+    return f"""\
+Write a SHORT spicy opinion post (100-150 words) for a data scientist's Substack Notes.
+
+Topic: {topic}
+
+This is a hot take — the author's practitioner opinion. Be direct and specific.
+No hedging, no "it depends", no balanced pros-and-cons. Take a side.
+
+Structure:
+- One opening sentence that states the opinion plainly.
+- 2-3 sentences explaining the real-world reasoning behind it.
+- End with a sharp question that invites genuine debate (not "Thoughts?" or "Do you agree?").
+
+{_SHARED_VOICE_RULES}
+
+Return ONLY the note text. No title, no markdown headers. Plain paragraphs only.
+"""
+
+
+def build_warstory_prompt(notes: str) -> str:
+    return f"""\
+Turn these rough notes into a short story-format Substack post (200-350 words) about a
+real data science or engineering experience — a debugging session, a project that went
+sideways, a lesson learned the hard way.
+
+Raw notes from the author:
+\"\"\"{notes}\"\"\"
+
+Structure:
+- Title: something specific and slightly self-deprecating (not "Lessons Learned")
+- Opening: drop the reader into the moment, one sentence
+- The middle: what happened, what you tried, what broke, the moment it clicked
+- The ending: what you'd do differently, or just the honest takeaway
+- Closing question: ask if others have hit the same thing
+
+Keep the author's messy honesty from the notes. Don't clean it up too much.
+If the notes are vague, write a best-effort version and flag with [QUESTION: ...] at top.
+
+{_SHARED_VOICE_RULES}
+
+Return ONLY the markdown post. No preamble.
+"""
+
+
+def build_contrast_prompt(topic: str) -> str:
+    return f"""\
+Write a "what they say vs what it actually is" Substack post (200-300 words) aimed at
+data scientists and ML practitioners.
+
+Topic: {topic}
+
+Format: contrast the popular perception, tutorial version, or job-posting language with
+what practitioners actually experience on the ground. Be specific and funny if it fits.
+
+Structure:
+- Title: something like "What [topic] looks like in interviews vs in practice" or similar
+- 2-4 contrast pairs, each short and punchy (not a table — flowing prose or tight bullets)
+- A closing line that's honest and non-generic
+
+Do NOT:
+- Make it a listicle of generic complaints
+- Add fake balance ("but there are upsides too!")
+- Be vague — every contrast should be something real
+
+{_SHARED_VOICE_RULES}
+
+Return ONLY the markdown post. No preamble.
 """
 
 

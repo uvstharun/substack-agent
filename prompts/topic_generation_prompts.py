@@ -39,7 +39,12 @@ actually built these things — not just summarizing documentation.
 
 Good angles: building a RAG pipeline from scratch, fine-tuning a small LLM, setting up an AI agent \
 with tool use, time series forecasting with Python, NLP text extraction pipelines, anomaly detection \
-systems, MLOps workflows, prompt engineering techniques that actually work, evaluating LLM outputs.
+systems, MLOps workflows, prompt engineering techniques that actually work, evaluating LLM outputs, \
+clinical NLP for EHR notes, SDOH feature engineering, working with FHIR data in Python, building \
+readmission or risk models, healthcare-specific data cleaning patterns, Databricks for analytics pipelines.
+
+About 30% of suggested tutorials should have a healthcare data science angle — the author works in \
+healthcare and this is a differentiator most DS writers don't have.
 
 Every tutorial should teach something concrete the reader can replicate in an afternoon.
 
@@ -61,11 +66,13 @@ traditional analytics to ML engineering, or navigate the rapidly changing AI job
 
 The author has a specific vantage point: nearly 2 years in, actively transitioning from traditional \
 data science work (SQL, dashboards, forecasting) to AI/agent development. This journey — learning \
-LLMs while maintaining a day job — is exactly what many readers are living.
+LLMs while maintaining a day job — is exactly what many readers are living. The author also works \
+in healthcare data science, which is an underserved and high-demand niche worth positioning around.
 
 Topics should address: building an AI portfolio, how to learn LLMs practically, what hiring managers \
 want now vs two years ago, the skills gap between data science and AI engineering, side project \
-strategies, how to get your first ML role, or honest reflections on the transition journey.
+strategies, how to get your first ML or healthcare DS role, breaking into healthcare AI from \
+general data science, or honest reflections on the transition journey.
 
 Current trend context:
 {trend_context or "No trend data — rely on evergreen career angles."}
@@ -89,7 +96,10 @@ not just reading the docs. What breaks in production, what the tutorials don't t
 won a real comparison, what the hype misses.
 
 Topics: framework comparisons (LangChain vs LlamaIndex, different vector DBs), deep dives into \
-specific libraries, "what I learned after X weeks with Y tool", or reviews of new AI releases.
+specific libraries, "what I learned after X weeks with Y tool", or reviews of new AI releases. \
+Also consider healthcare-adjacent tools: Databricks for clinical analytics, dbt for healthcare \
+data pipelines, medspaCy or scispaCy for clinical NLP, FHIR clients in Python, Azure Health \
+Data Services — areas where most DS writers have zero coverage.
 
 Current trend context (prioritize newly released tools or frameworks):
 {trend_context or "No trend data — focus on tools the author has direct experience with."}
@@ -111,7 +121,9 @@ on-the-ground reality as a practitioner building with these tools every day.
 Good angles: why most AI tutorials are misleading, unpopular truths about working as a data scientist, \
 what the AI hype cycle means for practitioners, why a specific popular framework is overrated, \
 honest takes on AI job market claims, what "prompt engineering" actually is vs how it's sold, \
-the gap between AI demos and production reality.
+the gap between AI demos and production reality, what healthcare AI actually looks like in a \
+county hospital vs the research papers, why most clinical AI projects fail at data extraction \
+not modeling, the real state of AI adoption in public sector health systems.
 
 Takes must be specific and defensible — not vague complaints but argued positions with real evidence.
 
@@ -138,7 +150,10 @@ practitioners actually want to read but rarely publish.
 
 Topics: building and shipping a complete ML project, lessons from a failed experiment, \
 architecture decisions and tradeoffs, debugging stories, performance optimization journeys, \
-or anything that gives readers a detailed behind-the-scenes view of real ML work.
+or anything that gives readers a detailed behind-the-scenes view of real ML work. \
+The author's healthcare DS experience is a strong differentiator here: sanitized case studies \
+from ICU utilization forecasting, readmission risk modeling, SDOH extraction from clinical \
+notes, or radiology KPI dashboards give readers access to a world most DS writers can't touch.
 
 Current trend context:
 {trend_context or "No trend data — draw from the author's real project experience."}

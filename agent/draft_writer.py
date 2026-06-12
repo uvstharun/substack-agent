@@ -13,6 +13,30 @@ from memory import topic_memory, style_memory
 from prompts.draft_prompts import build_draft_prompt
 
 
+def _humanize(text: str) -> str:
+    """Run a humanizer pass to remove AI writing patterns."""
+    try:
+        humanizer_prompt = (
+            "You are a writing editor that removes AI writing patterns to make text sound natural and human. "
+            "Remove: inflated significance language (testament, pivotal, underscores), promotional adjectives "
+            "(vibrant, groundbreaking, stunning), -ing phrase padding (highlighting, showcasing, fostering), "
+            "AI vocabulary (additionally, delve, crucial, landscape as metaphor, tapestry), em dash overuse, "
+            "rule-of-three lists, vague attributions (experts believe, industry reports), sycophantic openers, "
+            "and knowledge-cutoff disclaimers. Add voice: vary sentence rhythm, include opinions where natural, "
+            "use specific details over vague claims. Return ONLY the rewritten text with no preamble."
+        )
+        result = orchestrator.call(
+            f"Humanize this Substack draft:\n\n{text}",
+            extra_system=humanizer_prompt,
+            max_tokens=6000,
+            temperature=0.7,
+        )
+        return result
+    except Exception as e:
+        logger.warning(f"Humanizer pass failed, using original: {e}")
+        return text
+
+
 def write_draft(topic: dict, outline: dict) -> str:
     """
     Generate a complete first draft from a topic + outline.
@@ -23,6 +47,9 @@ def write_draft(topic: dict, outline: dict) -> str:
 
     logger.info(f"Writing draft for: {topic.get('title')}")
     draft_markdown = orchestrator.call(prompt, max_tokens=6000, temperature=0.85)
+
+    logger.info("Running humanizer pass on draft...")
+    draft_markdown = _humanize(draft_markdown)
 
     _save_draft(topic, draft_markdown)
     topic_memory.update_topic_status(topic.get("id", ""), "drafted")

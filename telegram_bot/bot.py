@@ -43,9 +43,8 @@ from telegram.constants import ParseMode
 
 from config.config import cfg
 from agent.trend_researcher import get_trend_summary, get_ai_news_topics
-from agent import topic_generator, outline_generator, draft_writer, daily_content, orchestrator, research_writer, comment_suggester
+from agent import topic_generator, outline_generator, draft_writer, daily_content, orchestrator, research_writer, comment_suggester, humanizer
 from memory import topic_memory
-from prompts.onboarding_prompts import SUBSTACK_GUIDE
 from telegram_bot.formatters import (
     format_topics_batch,
     format_outline_summary,
@@ -92,21 +91,19 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return await _deny(update)
     text = (
         "👋 <b>Substack Content Agent</b>\n\n"
-        "I'm your AI writing partner and coach.\n\n"
-        "🆕 <b>First time on Substack?</b>\n"
-        "/guide — read the first-timer's guide\n"
-        "/firstpost — draft your very first post\n\n"
-        "📝 <b>Daily short content (for engagement):</b>\n"
-        "/daily — generate today's full daily pack\n"
-        "/news — fresh AI news (list of post ideas from the web)\n"
+        "Your data science writing partner.\n\n"
+        "📝 <b>Short content (Notes + quick posts):</b>\n"
+        "/news — fresh AI + data science news (list of post ideas)\n"
         "/newspost N — write a post about news item N (or a short description)\n"
-        "/notes [N] — generate N short 30-40 word AI Notes (default 5)\n"
-        "/research &lt;topic&gt; — give me a topic, I research the web and write a 700-1000 word post with sources\n"
+        "/notes [N] — generate N short 30-40 word DS/AI Notes (default 5)\n"
+        "/take &lt;topic&gt; — hot take, 100-150 words, perfect for Notes\n"
+        "/contrast &lt;topic&gt; — 'what they say vs reality' post\n"
+        "/warstory &lt;your rough notes&gt; — turn a debugging/project experience into a story post\n"
+        "/learned &lt;your note&gt; — polish your learning into a post\n"
+        "/research &lt;topic&gt; — web research + 700-1000 word post with sources\n"
         "/comment &lt;paste post&gt; — suggest 3 human-feeling comments\n"
-        "  (or just paste a post into chat — I'll detect it automatically)\n"
-        "/jobtip — job search strategy tip\n"
-        "/learned &lt;your note&gt; — polish your learning into a post\n\n"
-        "📚 <b>Weekly long-form content:</b>\n"
+        "  (or just paste a post into chat — I'll detect it automatically)\n\n"
+        "📚 <b>Weekly long-form pipeline:</b>\n"
         "/topics — generate weekly topic suggestions\n"
         "/pending /approved /approve N /dismiss N\n"
         "/outline N /draft N\n\n"
@@ -114,7 +111,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/status — pipeline overview\n"
         "/help — show this message\n\n"
         "💬 <b>Or just chat with me</b> — ask anything about writing, "
-        "Substack strategy, AI topics, or how to use this agent."
+        "data science, Substack strategy, or how to use this agent."
     )
     await _safe_send(update, text)
 
@@ -320,6 +317,7 @@ async def cmd_draft(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def _send_post_as_file(update: Update, kind: str, markdown: str) -> None:
     """Send a short post both as a preview message AND as a .md file."""
+    markdown = humanizer.humanize(markdown)
     preview = markdown if len(markdown) < 3500 else markdown[:3400] + "\n\n... (full version in file)"
     await update.message.reply_text(preview, parse_mode=None)
 
@@ -337,61 +335,7 @@ def datetime_now() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-# ── Onboarding commands ──────────────────────────────────────────────────────
-
-async def cmd_guide(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
-        return await _deny(update)
-    # The guide is plain text with simple markdown, send as-is
-    await update.message.reply_text(SUBSTACK_GUIDE, parse_mode=None)
-
-
-async def cmd_firstpost(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
-        return await _deny(update)
-    await _safe_send(update, "✍️ Drafting your very first Substack post... (~60s)")
-    try:
-        post = daily_content.generate_first_post()
-        await _send_post_as_file(update, "first_post", post)
-        await _safe_send(
-            update,
-            "💡 <b>Before you publish:</b>\n"
-            "1. Read it aloud — does it sound like YOU?\n"
-            "2. Pick one of the alternative titles at the bottom if the main one doesn't land\n"
-            "3. Fill in the subtitle field on Substack (don't leave blank)\n"
-            "4. Write your About page first if you haven't\n"
-            "5. Hit publish — done is better than perfect for post #1",
-        )
-    except Exception as e:
-        logger.error(f"First post generation failed: {e}")
-        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
-
-
 # ── Daily short content commands ─────────────────────────────────────────────
-
-async def cmd_daily(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if not _authorized(update):
-        return await _deny(update)
-    await _safe_send(update, "📝 Generating today's daily pack... (~90s)\n1. AI news commentary\n2. Job search tip\n3. Daily learning prompt")
-    try:
-        await _safe_send(update, "🔸 <b>1/3 — AI news commentary</b>")
-        news = daily_content.generate_ai_news_post()
-        await _send_post_as_file(update, "ai_news", news)
-
-        await _safe_send(update, "🔸 <b>2/3 — Job search tip</b>")
-        tip = daily_content.generate_job_tip_post()
-        await _send_post_as_file(update, "job_tip", tip)
-
-        await _safe_send(
-            update,
-            "🔸 <b>3/3 — Daily learning</b>\n\n"
-            "What did you learn or debug today? Reply with\n"
-            "<code>/learned your rough notes here</code>\n"
-            "and I'll turn it into a polished short post.",
-        )
-    except Exception as e:
-        logger.error(f"Daily pack failed: {e}")
-        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
 
 
 async def cmd_news(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -498,7 +442,7 @@ async def cmd_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await _safe_send(update, f"⚡ Generating {count} short AI notes (30-40 words each)... (~30s)")
     try:
         notes = daily_content.generate_ai_notes(count=count)
-        # Send as plain text so the numbered list renders cleanly
+        notes = humanizer.humanize(notes)
         await update.message.reply_text(notes, parse_mode=None)
         await _safe_send(update, "📌 Pick one and paste into Substack Notes. Run /notes again for more.")
     except Exception as e:
@@ -506,15 +450,86 @@ async def cmd_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await _safe_send(update, f"❌ Failed: {_h(str(e))}")
 
 
-async def cmd_jobtip(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def cmd_take(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Write a short spicy practitioner opinion, perfect for Substack Notes."""
     if not _authorized(update):
         return await _deny(update)
-    await _safe_send(update, "💼 Writing today's job search tip...")
+    topic = " ".join(context.args).strip() if context.args else ""
+    if not topic:
+        await _safe_send(
+            update,
+            "Usage: <code>/take &lt;topic&gt;</code>\n\n"
+            "Example:\n"
+            "<code>/take most data science teams don't need RAG</code>\n"
+            "<code>/take Pandas is still better than Polars for 90% of jobs</code>\n"
+            "<code>/take healthcare AI projects fail at data, not modeling</code>\n\n"
+            "I'll write a 100-150 word hot take for Substack Notes.",
+        )
+        return
+    await _safe_send(update, f"🔥 Writing take on: <i>{_h(topic)}</i>... (~20s)")
     try:
-        post = daily_content.generate_job_tip_post()
-        await _send_post_as_file(update, "job_tip", post)
+        from prompts.daily_prompts import build_take_prompt
+        prompt = build_take_prompt(topic)
+        post = orchestrator.call(prompt, max_tokens=500, temperature=0.9)
+        post = humanizer.humanize(post)
+        from agent.daily_content import _save_post
+        _save_post("take", post)
+        await update.message.reply_text(post, parse_mode=None)
+        await _safe_send(update, "📌 Paste into Substack Notes.")
     except Exception as e:
-        logger.error(f"Job tip generation failed: {e}")
+        logger.error(f"Take generation failed: {e}")
+        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
+
+
+async def cmd_warstory(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Turn rough notes about a debugging/project experience into a story post."""
+    if not _authorized(update):
+        return await _deny(update)
+    notes = " ".join(context.args).strip() if context.args else ""
+    if not notes:
+        await _safe_send(
+            update,
+            "Usage: <code>/warstory &lt;your rough notes&gt;</code>\n\n"
+            "Example:\n"
+            "<code>/warstory spent 3 days debugging why our readmission model was off. turned out the join key had trailing spaces in prod but not dev. classic.</code>\n\n"
+            "I'll turn it into a short relatable story post.",
+        )
+        return
+    await _safe_send(update, "📖 Turning your notes into a story... (~30s)")
+    try:
+        from prompts.daily_prompts import build_warstory_prompt
+        prompt = build_warstory_prompt(notes)
+        post = orchestrator.call(prompt, max_tokens=1200, temperature=0.85)
+        await _send_post_as_file(update, "warstory", post)
+    except Exception as e:
+        logger.error(f"War story generation failed: {e}")
+        await _safe_send(update, f"❌ Failed: {_h(str(e))}")
+
+
+async def cmd_contrast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Write a 'what they say vs reality' post for data scientists."""
+    if not _authorized(update):
+        return await _deny(update)
+    topic = " ".join(context.args).strip() if context.args else ""
+    if not topic:
+        await _safe_send(
+            update,
+            "Usage: <code>/contrast &lt;topic&gt;</code>\n\n"
+            "Example:\n"
+            "<code>/contrast being a data scientist</code>\n"
+            "<code>/contrast RAG in production</code>\n"
+            "<code>/contrast healthcare AI projects</code>\n\n"
+            "I'll write a 'what they say vs what it actually is' post.",
+        )
+        return
+    await _safe_send(update, f"⚖️ Writing contrast post on: <i>{_h(topic)}</i>... (~30s)")
+    try:
+        from prompts.daily_prompts import build_contrast_prompt
+        prompt = build_contrast_prompt(topic)
+        post = orchestrator.call(prompt, max_tokens=1000, temperature=0.85)
+        await _send_post_as_file(update, "contrast", post)
+    except Exception as e:
+        logger.error(f"Contrast post failed: {e}")
         await _safe_send(update, f"❌ Failed: {_h(str(e))}")
 
 
@@ -571,27 +586,32 @@ async def cmd_comment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 # ── Conversational Q&A (non-command messages) ────────────────────────────────
 
 _CHAT_COACH_PROMPT = """\
-You are the user's Substack writing coach and AI content strategist, embedded in a Telegram bot. \
+You are the user's Substack writing coach and data science content strategist, embedded in a Telegram bot. \
 You answer questions conversationally — like a knowledgeable peer over text, not a formal assistant.
 
 Context about the user:
-- They are a data scientist (~2 years experience) starting a generalist AI/Data Science Substack.
-- They have NEVER posted on Substack before. You help them ship consistently.
-- They control this agent from Telegram. Available commands they can run:
-  • /firstpost — draft their first-ever Substack post
-  • /guide — first-timer's Substack guide
-  • /daily — generate today's pack (AI news + job tip + learning prompt)
-  • /news, /jobtip — single daily short posts
+- Data scientist (~2 years experience) at a county health system. Strong in Python, SQL, Azure, Databricks.
+- Building a Substack focused on data science (70%) and healthcare AI (30%). Goal: post consistently and get noticed.
+- The Substack angle: practitioner perspective — what DS/ML actually looks like on the ground, not tutorials from docs.
+- They control this agent from Telegram. Available commands:
+  • /news — fresh AI + data science news ideas from the web
+  • /newspost N — write a post on a specific news item
+  • /notes [N] — short 30-40 word DS/AI Notes for daily engagement
+  • /take <topic> — hot take, 100-150 words, perfect for Notes
+  • /contrast <topic> — 'what they say vs reality' post
+  • /warstory <notes> — turn a debugging/project story into a post
+  • /research <topic> — web research + 700-1000 word post with sources
   • /learned <notes> — polish a rough learning note into a post
+  • /comment <post> — suggest comments to leave on someone else's post
   • /topics — weekly long-form topic suggestions
   • /approve N, /dismiss N, /approved, /outline N, /draft N — long-form pipeline
   • /status — pipeline overview
 
 Style:
-- Short, direct, conversational. Telegram-length — usually 2–6 short paragraphs.
-- If a command would help them, mention it inline (e.g. "try /firstpost").
-- No corporate filler. First person where natural. Honest over hype.
-- If asked to write a full post, suggest the relevant command instead of dumping a long draft inline.
+- Short, direct, conversational. Telegram-length — usually 2-4 short paragraphs.
+- If a command would help, mention it inline.
+- No corporate filler. Honest over hype. If a strategy won't work, say so.
+- If asked to write a full post, suggest the relevant command instead of dumping a draft inline.
 """
 
 
@@ -674,17 +694,15 @@ def run_bot() -> None:
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("status", cmd_status))
-    # Onboarding
-    app.add_handler(CommandHandler("guide", cmd_guide))
-    app.add_handler(CommandHandler("firstpost", cmd_firstpost))
-    # Daily short content
-    app.add_handler(CommandHandler("daily", cmd_daily))
+    # Short content
     app.add_handler(CommandHandler("news", cmd_news))
     app.add_handler(CommandHandler("newspost", cmd_newspost))
     app.add_handler(CommandHandler("notes", cmd_notes))
+    app.add_handler(CommandHandler("take", cmd_take))
+    app.add_handler(CommandHandler("warstory", cmd_warstory))
+    app.add_handler(CommandHandler("contrast", cmd_contrast))
     app.add_handler(CommandHandler("research", cmd_research))
     app.add_handler(CommandHandler("comment", cmd_comment))
-    app.add_handler(CommandHandler("jobtip", cmd_jobtip))
     app.add_handler(CommandHandler("learned", cmd_learned))
     # Weekly long-form
     app.add_handler(CommandHandler("topics", cmd_topics))

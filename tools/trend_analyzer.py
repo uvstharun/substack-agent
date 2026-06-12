@@ -16,6 +16,11 @@ _SEARCH_QUERIES = [
     "AI developer tools release",
     "RAG vector database news",
     "multi-agent system release news",
+    "Python data science library release this week",
+    "data engineering tools news recent",
+    "MLOps platform tools news",
+    "healthcare AI clinical machine learning news",
+    "SQL analytics dbt duckdb news",
 ]
 
 
@@ -28,6 +33,11 @@ _NEWS_QUERIES = [
     "Anthropic OpenAI Google AI news",
     "AI research paper viral recent",
     "AI developer tool launch",
+    "data science tools news this week",
+    "Python ML library new release",
+    "data engineering analytics news",
+    "healthcare AI clinical data news recent",
+    "MLOps Databricks dbt news",
 ]
 
 
