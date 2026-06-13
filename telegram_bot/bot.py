@@ -301,6 +301,7 @@ async def cmd_draft(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     try:
         draft_text = draft_writer.write_draft(topic, outline)
+        draft_text = humanizer.humanize(draft_text)
 
         file_bytes = draft_text.encode("utf-8")
         filename = title[:40].lower().replace(" ", "-").replace("/", "-") + ".md"
